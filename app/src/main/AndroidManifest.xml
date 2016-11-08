@@ -19,6 +19,15 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".MusicList"
+            android:launchMode="singleInstance">
+            <intent-filter>
+                <action android:name="com.yzq.Android.MUSICLIST" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name=".MusicService"
             android:enabled="true"

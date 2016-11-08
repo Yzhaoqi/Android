@@ -2,8 +2,8 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-        android:id="@+id/action_load"
-        android:icon="@mipmap/ic_plus"
-        android:title="Load Mp3 File"
+        android:id="@+id/action_scan"
+        android:icon="@mipmap/ic_search"
+        android:title="scanning"
         app:showAsAction="always" />
 </menu>

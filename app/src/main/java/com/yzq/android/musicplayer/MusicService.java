@@ -7,11 +7,14 @@ import android.os.Binder;
 import android.os.IBinder;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class MusicService extends Service{
     private MediaPlayer mediaPlayer;
     private final IBinder binder = new MyBinder();
     private boolean isStop = false;
+    private ArrayList<MusicItem> musicList;
+    private int current;
 
     public class MyBinder extends Binder{
         MusicService getService() {
@@ -29,7 +32,6 @@ public class MusicService extends Service{
     @Override
     public void onCreate() {
         super.onCreate();
-
     }
 
     @Override
@@ -45,7 +47,9 @@ public class MusicService extends Service{
         return (mediaPlayer != null && mediaPlayer.isPlaying());
     }
 
-    public void load(String path) {
+    public void load(ArrayList<MusicItem> list, int i) {
+        musicList = list;
+        current = i;
         try {
             if (mediaPlayer != null) {
                 mediaPlayer.stop();
@@ -53,9 +57,24 @@ public class MusicService extends Service{
                 mediaPlayer = null;
             }
             mediaPlayer = new MediaPlayer();
-            mediaPlayer.setDataSource(path);
+            mediaPlayer.setDataSource(musicList.get(i).getPath());
             mediaPlayer.prepare();
-            mediaPlayer.setLooping(true);
+            mediaPlayer.setLooping(false);
+            mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                @Override
+                public void onCompletion(MediaPlayer mediaPlayer) {
+                    if (current == musicList.size()-1) current = 0;
+                    else current++;
+                    try {
+                        mediaPlayer.reset();
+                        mediaPlayer.setDataSource(musicList.get(current).getPath());
+                        mediaPlayer.prepare();
+                        mediaPlayer.start();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -101,4 +120,9 @@ public class MusicService extends Service{
     public int getDuration() {
         return mediaPlayer.getDuration();
     }
+
+    public String getCurrentMusic() {
+        return musicList.get(current).getPath();
+    }
+
 }

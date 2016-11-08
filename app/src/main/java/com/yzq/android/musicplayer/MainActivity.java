@@ -2,16 +2,12 @@ package com.yzq.android.musicplayer;
 
 import android.app.Activity;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Path;
-import android.graphics.Rect;
-import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.IBinder;
@@ -32,6 +28,7 @@ import android.widget.TextView;
 
 import java.net.URLConnection;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
@@ -43,10 +40,16 @@ public class MainActivity extends AppCompatActivity {
     private FrameLayout frame;
     private MusicHandler musicHandler;
     private MusicThread musicThread;
+
     private String address;
+    private ArrayList<MusicItem> musicList;
+    private int num;
+
     private Thread thread;
     private float degree = 0;
     private SimpleDateFormat time = new SimpleDateFormat("mm:ss");
+
+    private DrawCover dc = new DrawCover();
 
     private ServiceConnection sc = new ServiceConnection() {
         @Override
@@ -65,11 +68,12 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void handleMessage(Message msg) {
             if (musicService != null && musicService.isValid()) {
+                UpdateMusicMessage(musicService.getCurrentMusic());
                 seekBar.setMax(musicService.getDuration());
                 seekBar.setProgress(musicService.getCurrentPosition());
                 Date date = new Date(musicService.getCurrentPosition());
                 current.setText(time.format(date));
-                degree = (float) ((degree+0.2)%360);
+                degree = (float) ((degree+0.08)%360);
                 frame.setRotation(degree);
             }
         }
@@ -204,16 +208,19 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == Activity.RESULT_OK) {
-            String mineType;
-            Uri uri = data.getData();
-            address = uri.getPath();
-            mineType = URLConnection.guessContentTypeFromName(address);
+            musicList = (ArrayList<MusicItem>)data.getSerializableExtra("musicList");
+            num = data.getIntExtra("currentMusic", 0);
+            address = musicList.get(num).getPath();
+            Uri uri = Uri.parse(address);
+            String mineType = URLConnection.guessContentTypeFromName(address);
             filepath.setText(address);
             play.setText("PLAY");
             status.setText("IDLE");
             if (mineType != null && mineType.startsWith("audio")) {
-                setCover(uri);
-                musicService.load(address);
+                dc.setCover(this, logo, uri);
+                frame.setRotation(0);
+                degree = 0;
+                musicService.load(musicList, num);
                 Date date = new Date(musicService.getDuration());
                 duration.setText(time.format(date));
                 load_file.setText("Loaded media file:");
@@ -227,6 +234,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main_activity_menu, menu);
@@ -237,41 +245,28 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_load:
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("audio/*");
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-                startActivityForResult(intent,1);
+                Intent intent = new Intent("com.yzq.Android.MUSICLIST");
+                intent.putExtra("musicList", musicList);
+                startActivityForResult(intent, 1);
                 return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
-    private void setCover(Uri uri) {
-        MediaMetadataRetriever myRetriever = new MediaMetadataRetriever();
-        myRetriever.setDataSource(this, uri);
-        byte[] artwork;
-        artwork = myRetriever.getEmbeddedPicture();
-        if (artwork != null) {
-            Bitmap bMap = BitmapFactory.decodeByteArray(artwork, 0, artwork.length);
-            logo.setImageBitmap(getRoundedShape(bMap));
-        } else {
-            logo.setImageResource(R.drawable.cover);
+    private void UpdateMusicMessage(String path) {
+        if (address != path) {
+            address = path;
+            Uri uri = Uri.parse(address);
+            String mineType = URLConnection.guessContentTypeFromName(address);
+            filepath.setText(address);
+            if (mineType != null && mineType.startsWith("audio")) {
+                dc.setCover(this, logo, uri);
+                frame.setRotation(0);
+                degree = 0;
+                Date date = new Date(musicService.getDuration());
+                duration.setText(time.format(date));
+                load_file.setText("Loaded media file:");
+            }
         }
-        frame.setRotation(0);
-        degree = 0;
-    }
-
-    private Bitmap getRoundedShape(Bitmap bMap) {
-        int targetWidth = 1000;
-        int targetHeight = 1000;
-        Bitmap targetBitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(targetBitmap);
-        Path path = new Path();
-        path.addCircle(((float)targetWidth-1)/2, ((float)targetHeight-1)/2, (Math.min(((float)targetWidth), ((float)targetHeight))/2), Path.Direction.CCW);
-
-        canvas.clipPath(path);
-        Bitmap sourceBitmap = bMap;
-        canvas.drawBitmap(sourceBitmap, new Rect(0, 0, sourceBitmap.getWidth(), sourceBitmap.getHeight()), new Rect(0, 0, targetWidth, targetHeight), null);
-        return targetBitmap;
     }
 }
