@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Handler;
@@ -17,6 +16,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -26,6 +26,12 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.URLConnection;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -55,6 +61,9 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             musicService = ((MusicService.MyBinder)(iBinder)).getService();
+            if (musicList != null && !musicList.isEmpty()) {
+                Initial();
+            }
         }
 
         @Override
@@ -138,6 +147,28 @@ public class MainActivity extends AppCompatActivity {
         thread.start();
         showPhonePermissions();
 
+        FileInputStream fis;
+        try {
+            fis = openFileInput("musicList");
+            ObjectInputStream ois = new ObjectInputStream(fis);
+            musicList = (ArrayList<MusicItem>)ois.readObject();
+            ois.close();
+            fis.close();
+
+            fis = openFileInput("number");
+            num = fis.read();
+            Log.v("the number is", String.valueOf(num));
+            fis.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
+
+
         play.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -196,6 +227,22 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        FileOutputStream fos;
+        try {
+            fos = openFileOutput("musicList", Context.MODE_PRIVATE);
+            ObjectOutputStream os = new ObjectOutputStream(fos);
+            os.writeObject(musicList);
+            os.close();
+            fos.close();
+
+            fos = openFileOutput("number", Context.MODE_PRIVATE);
+            fos.write(num);
+            fos.close();
+            Log.v("MyApp","File has been written");
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.v("MyApp","File didn't write");
+        }
         musicHandler.removeCallbacks(musicThread);
         unbindService(sc);
         try {
@@ -210,27 +257,7 @@ public class MainActivity extends AppCompatActivity {
         if (resultCode == Activity.RESULT_OK) {
             musicList = (ArrayList<MusicItem>)data.getSerializableExtra("musicList");
             num = data.getIntExtra("currentMusic", 0);
-            address = musicList.get(num).getPath();
-            Uri uri = Uri.parse(address);
-            String mineType = URLConnection.guessContentTypeFromName(address);
-            filepath.setText(address);
-            play.setText("PLAY");
-            status.setText("IDLE");
-            if (mineType != null && mineType.startsWith("audio")) {
-                dc.setCover(this, logo, uri);
-                frame.setRotation(0);
-                degree = 0;
-                musicService.load(musicList, num);
-                Date date = new Date(musicService.getDuration());
-                duration.setText(time.format(date));
-                load_file.setText("Loaded media file:");
-                play.setEnabled(true);
-                stop.setEnabled(true);
-            } else {
-                load_file.setText("Error file open:");
-                play.setEnabled(false);
-                stop.setEnabled(false);
-            }
+            Initial();
         }
     }
 
@@ -251,6 +278,30 @@ public class MainActivity extends AppCompatActivity {
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void Initial() {
+        address = musicList.get(num).getPath();
+        Uri uri = Uri.parse(address);
+        String mineType = URLConnection.guessContentTypeFromName(address);
+        filepath.setText(address);
+        play.setText("PLAY");
+        status.setText("IDLE");
+        if (mineType != null && mineType.startsWith("audio")) {
+            dc.setCover(this, logo, uri);
+            frame.setRotation(0);
+            degree = 0;
+            musicService.load(musicList, num);
+            Date date = new Date(musicService.getDuration());
+            duration.setText(time.format(date));
+            load_file.setText("Loaded media file:");
+            play.setEnabled(true);
+            stop.setEnabled(true);
+        } else {
+            load_file.setText("Error file open:");
+            play.setEnabled(false);
+            stop.setEnabled(false);
+        }
     }
 
     private void UpdateMusicMessage(String path) {
