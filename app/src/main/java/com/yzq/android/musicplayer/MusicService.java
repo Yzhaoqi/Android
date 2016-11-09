@@ -125,4 +125,7 @@ public class MusicService extends Service{
         return musicList.get(current).getPath();
     }
 
+    public int getCurrent() {
+        return current;
+    }
 }

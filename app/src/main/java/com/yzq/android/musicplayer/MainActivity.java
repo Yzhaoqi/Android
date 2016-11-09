@@ -17,6 +17,7 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -177,8 +178,9 @@ public class MainActivity extends AppCompatActivity {
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                if (b)
-                    musicService.seek(i);
+                if (b) {
+                    current.setText(time.format(new Date(i)));
+                }
             }
 
             @Override
@@ -187,13 +189,14 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                musicService.seek(seekBar.getProgress());
             }
         });
 
         quit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                store_music_to_file();
+                //store_music_to_file();
                 musicHandler.removeCallbacks(musicThread);
                 unbindService(sc);
                 try {
@@ -217,6 +220,15 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            moveTaskToBack(false);
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
     }
 
     @Override
@@ -274,6 +286,7 @@ public class MainActivity extends AppCompatActivity {
     private void UpdateMusicMessage(String path) {
         if (address != path) {
             address = path;
+            num = musicService.getCurrent();
             Uri uri = Uri.parse(address);
             String mineType = URLConnection.guessContentTypeFromName(address);
             filepath.setText(address);
@@ -285,6 +298,7 @@ public class MainActivity extends AppCompatActivity {
                 duration.setText(time.format(date));
                 load_file.setText("Loaded media file:");
             }
+            store_music_to_file();
         }
     }
 
@@ -308,7 +322,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     private void read_music_from_file() {
