@@ -146,32 +146,12 @@ public class MainActivity extends AppCompatActivity {
         thread = new Thread(musicThread);
         thread.start();
         showPhonePermissions();
-
-        FileInputStream fis;
-        try {
-            fis = openFileInput("musicList");
-            ObjectInputStream ois = new ObjectInputStream(fis);
-            musicList = (ArrayList<MusicItem>)ois.readObject();
-            ois.close();
-            fis.close();
-
-            fis = openFileInput("number");
-            num = fis.read();
-            Log.v("the number is", String.valueOf(num));
-            fis.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-
-
+        read_music_from_file();
 
         play.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                seekBar.setEnabled(true);
                 if (play.getText().equals("PLAY")) {
                     musicService.play();
                     play.setText("PAUSE");
@@ -190,6 +170,7 @@ public class MainActivity extends AppCompatActivity {
                 musicService.stop();
                 play.setText("PLAY");
                 status.setText("STOP");
+                seekBar.setEnabled(false);
             }
         }));
 
@@ -212,6 +193,7 @@ public class MainActivity extends AppCompatActivity {
         quit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                store_music_to_file();
                 musicHandler.removeCallbacks(musicThread);
                 unbindService(sc);
                 try {
@@ -227,22 +209,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        FileOutputStream fos;
-        try {
-            fos = openFileOutput("musicList", Context.MODE_PRIVATE);
-            ObjectOutputStream os = new ObjectOutputStream(fos);
-            os.writeObject(musicList);
-            os.close();
-            fos.close();
-
-            fos = openFileOutput("number", Context.MODE_PRIVATE);
-            fos.write(num);
-            fos.close();
-            Log.v("MyApp","File has been written");
-        } catch (Exception e) {
-            e.printStackTrace();
-            Log.v("MyApp","File didn't write");
-        }
+        store_music_to_file();
         musicHandler.removeCallbacks(musicThread);
         unbindService(sc);
         try {
@@ -318,6 +285,51 @@ public class MainActivity extends AppCompatActivity {
                 duration.setText(time.format(date));
                 load_file.setText("Loaded media file:");
             }
+        }
+    }
+
+    private void store_music_to_file() {
+        FileOutputStream fos, numos;
+        try {
+            fos = openFileOutput("musicList", Context.MODE_PRIVATE);
+            ObjectOutputStream os = new ObjectOutputStream(fos);
+            os.writeObject(musicList);
+            os.close();
+            fos.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        try {
+            numos = openFileOutput("number", Context.MODE_PRIVATE);
+            numos.write(num);
+            numos.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private void read_music_from_file() {
+        FileInputStream fis;
+        try {
+            fis = openFileInput("musicList");
+            ObjectInputStream ois = new ObjectInputStream(fis);
+            musicList = (ArrayList<MusicItem>)ois.readObject();
+            ois.close();
+            fis.close();
+
+            fis = openFileInput("number");
+            num = fis.read();
+            Log.v("the number is", String.valueOf(num));
+            fis.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
     }
 }
