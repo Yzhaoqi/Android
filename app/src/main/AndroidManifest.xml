@@ -20,6 +20,7 @@
         </activity>
 
         <activity android:name=".MusicList"
+            android:label="Music list"
             android:launchMode="singleInstance">
             <intent-filter>
                 <action android:name="com.yzq.Android.MUSICLIST" />
