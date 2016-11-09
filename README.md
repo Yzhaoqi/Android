@@ -9,4 +9,6 @@ Android study
 11/9 1:01：实现数据持久化
 
 11/9 11:29：修复持久化数据的bug
+
+11/9 12:03：更改菜单栏图标，修改MusicList标题为Music list
  
